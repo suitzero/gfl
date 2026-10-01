@@ -173,7 +173,6 @@ export function parseGFL(input: string): ASTNode {
            current++;
         } else if (valueToken.type === 'LPAREN') {
           // If value is a list (like an array [1 2 3]), process it as such
-          let nextSubToken = tokens[current]; // valueToken is tokens[current] right now, wait current is already advanced?
           // No, wait, current is pointing to valueToken right now.
           let arr = [];
           current++; // Skip LPAREN
