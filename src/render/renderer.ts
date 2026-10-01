@@ -1,4 +1,5 @@
 import { getVertexShaderSource, getFragmentShaderSource } from './shader';
+import { setupControls } from '../ui/controls';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -12,6 +13,9 @@ export class Renderer {
   private uCameraUpLoc: WebGLUniformLocation | null;
   private uLightDirLoc: WebGLUniformLocation | null;
   private uLightColorLoc: WebGLUniformLocation | null;
+  private uBudgetLoc: WebGLUniformLocation | null;
+  
+  private currentBudget: number = 100.0;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2');
@@ -28,8 +32,13 @@ export class Renderer {
     this.uCameraUpLoc = this.gl.getUniformLocation(this.program, 'u_cameraUp');
     this.uLightDirLoc = this.gl.getUniformLocation(this.program, 'u_lightDir');
     this.uLightColorLoc = this.gl.getUniformLocation(this.program, 'u_lightColor');
+    this.uBudgetLoc = this.gl.getUniformLocation(this.program, 'u_budget');
 
     this.vao = this.setupQuad();
+    
+    setupControls((budget) => {
+      this.currentBudget = budget;
+    });
   }
 
   private compileShader(type: number, source: string): WebGLShader {
@@ -123,6 +132,7 @@ export class Renderer {
     gl.bindVertexArray(vao);
 
     gl.uniform2f(this.uResolutionLoc, gl.canvas.width, gl.canvas.height);
+    gl.uniform1f(this.uBudgetLoc, this.currentBudget);
     
     // Camera setup
     gl.uniform3f(this.uCameraPosLoc, 0.0, 2.0, -5.0);

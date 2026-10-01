@@ -24,17 +24,20 @@ export function getFragmentShaderSource(): string {
     uniform vec3 u_cameraUp;
     uniform vec3 u_lightDir;
     uniform vec3 u_lightColor;
+    uniform float u_budget; // 1.0 to 100.0
     
     // Configurable parameters
-    const int MAX_STEPS = 100;
+    const int BASE_MAX_STEPS = 100;
     const float MAX_DIST = 100.0;
     const float SURF_DIST = 0.001;
     
     ${hardcodedSdfGLSL}
     
-    vec3 getNormal(vec3 p) {
+    vec3 getNormal(vec3 p, float budget) {
         float d = map(p);
-        vec2 e = vec2(0.001, 0.0);
+        // At budget=100 -> e=0.001, at budget=1 -> e=0.01
+        float e_val = mix(0.01, 0.001, (budget - 1.0) / 99.0);
+        vec2 e = vec2(e_val, 0.0);
         vec3 n = d - vec3(
             map(p - e.xyy),
             map(p - e.yxy),
@@ -43,9 +46,9 @@ export function getFragmentShaderSource(): string {
         return normalize(n);
     }
     
-    float raymarch(vec3 ro, vec3 rd) {
+    float raymarch(vec3 ro, vec3 rd, int max_steps) {
         float dO = 0.0;
-        for(int i = 0; i < MAX_STEPS; i++) {
+        for(int i = 0; i < max_steps; i++) {
             vec3 p = ro + rd * dO;
             float dS = map(p);
             dO += dS;
@@ -68,13 +71,16 @@ export function getFragmentShaderSource(): string {
         // Ray direction
         vec3 rd = normalize(uv.x * u + uv.y * v + 1.5 * w);
         
-        float d = raymarch(ro, rd);
+        float budget_t = (u_budget - 1.0) / 99.0;
+        int max_steps = int(mix(10.0, float(BASE_MAX_STEPS), budget_t));
+        
+        float d = raymarch(ro, rd, max_steps);
         
         vec3 color = vec3(0.0);
         
         if(d < MAX_DIST) {
             vec3 p = ro + rd * d;
-            vec3 n = getNormal(p);
+            vec3 n = getNormal(p, u_budget);
             
             // Lighting
             vec3 l = normalize(u_lightDir);
@@ -82,16 +88,24 @@ export function getFragmentShaderSource(): string {
             // Diffuse
             float dif = clamp(dot(n, l), 0.0, 1.0);
             
-            // Specular (simple Phong)
-            vec3 viewDir = normalize(ro - p);
-            vec3 reflectDir = reflect(-l, n);
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+            // Specular (simple Phong) - only compute if budget is reasonable
+            float spec = 0.0;
+            if (u_budget > 20.0) {
+                vec3 viewDir = normalize(ro - p);
+                vec3 reflectDir = reflect(-l, n);
+                spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+            }
             
-            // Shadows
-            float dShadow = raymarch(p + n * SURF_DIST * 2.0, l);
-            if(dShadow < MAX_DIST) {
-                dif *= 0.1;
-                spec = 0.0;
+            // Shadows - skip if budget is very low, reduce steps if low
+            if (u_budget > 10.0) {
+                int shadow_steps = int(mix(5.0, float(BASE_MAX_STEPS), budget_t));
+                float dShadow = raymarch(p + n * SURF_DIST * 2.0, l, shadow_steps);
+                if(dShadow < MAX_DIST) {
+                    // Soften shadows at low budget by blending dif instead of harsh multiply
+                    float shadow_intensity = mix(0.5, 0.1, budget_t);
+                    dif *= shadow_intensity;
+                    spec = 0.0;
+                }
             }
             
             // Combine
