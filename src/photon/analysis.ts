@@ -52,7 +52,6 @@ export function computePhotonBudgetCurve(
     
     // Simulated SNR = mean / empirical standard deviation
     // Since we know the true mean is 'intensity', computing std dev relative to the empirical mean:
-    let varSumSq = 0;
     // We need to re-pass through or compute variance from sum and sumSq of measurements,
     // actually we can compute empirical variance: E[X^2] - E[X]^2
     // Let's compute empirical variance based on trials:
