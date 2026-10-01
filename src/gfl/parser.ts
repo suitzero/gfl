@@ -148,6 +148,9 @@ export function parseGFL(input: string): ASTNode {
       children: [],
       params: {},
       cost: 0,
+      qualityLevel: undefined,
+      fallback: undefined,
+      errorEstimate: undefined,
     };
 
     while (current < tokens.length && tokens[current].type !== 'RPAREN') {

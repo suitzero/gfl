@@ -9,6 +9,14 @@ describe('GFL Parser', () => {
     expect(ast.params.radius).toBe(5);
     expect(ast.params.center).toEqual([0, 0, 0]);
     expect(ast.children).toHaveLength(0);
+    
+    // Check for extension fields
+    expect(ast).toHaveProperty('qualityLevel');
+    expect(ast).toHaveProperty('fallback');
+    expect(ast).toHaveProperty('errorEstimate');
+    expect(ast.qualityLevel).toBeUndefined();
+    expect(ast.fallback).toBeUndefined();
+    expect(ast.errorEstimate).toBeUndefined();
   });
 
   it('parses nested transforms and CSG ops', () => {
