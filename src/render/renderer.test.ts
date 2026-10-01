@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Renderer } from './renderer';
 import { getFragmentShaderSource } from './shader';
 import { setupControls } from '../ui/controls';
+import type { ASTNode } from '../gfl/types';
 
 describe('Renderer & Shaders', () => {
   it('should include hardcoded SDF in fragment shader source', () => {
@@ -53,6 +54,69 @@ describe('Renderer & Shaders', () => {
     const label = document.querySelector('label') as HTMLLabelElement;
     expect(label.textContent).toBe('Render Budget: 50');
     
+    document.body.innerHTML = '';
+  });
+
+  it('should update active AST when budget changes based on LOD', () => {
+    document.body.innerHTML = '<div id="controls"></div>';
+
+    // Mock canvas context
+    const canvas = document.createElement('canvas');
+    const mockContext = {
+      createShader: vi.fn(() => ({})),
+      shaderSource: vi.fn(),
+      compileShader: vi.fn(),
+      getShaderParameter: vi.fn(() => true),
+      createProgram: vi.fn(() => ({})),
+      attachShader: vi.fn(),
+      linkProgram: vi.fn(),
+      getProgramParameter: vi.fn(() => true),
+      deleteShader: vi.fn(),
+      getUniformLocation: vi.fn(),
+      createVertexArray: vi.fn(() => ({})),
+      bindVertexArray: vi.fn(),
+      createBuffer: vi.fn(() => ({})),
+      bindBuffer: vi.fn(),
+      bufferData: vi.fn(),
+      getAttribLocation: vi.fn(() => 0),
+      enableVertexAttribArray: vi.fn(),
+      vertexAttribPointer: vi.fn(),
+    };
+    vi.spyOn(canvas, 'getContext').mockReturnValue(mockContext as any);
+
+    const renderer = new Renderer(canvas);
+    
+    const lod0: ASTNode = { type: 'sphere', children: [], params: { r: 1 }, cost: 1, qualityLevel: 0 };
+    const lod1: ASTNode = { type: 'tree', children: [], params: {}, cost: 10, qualityLevel: 50, fallback: lod0 };
+    const lod2: ASTNode = { type: 'forest', children: [], params: {}, cost: 100, qualityLevel: 80, fallback: lod1 };
+
+    const astChangeSpy = vi.fn();
+    renderer.onActiveASTChange = astChangeSpy;
+
+    // Set initial AST, budget is 100 by default, so it should select lod2
+    renderer.setAST(lod2);
+    expect(astChangeSpy).toHaveBeenCalledTimes(1);
+    expect(renderer.activeAST?.type).toBe('forest');
+
+    const slider = document.getElementById('budget-slider') as HTMLInputElement;
+    expect(slider).not.toBeNull();
+
+    // Change budget to 50, it should trigger an AST update picking lod1 (tree)
+    astChangeSpy.mockClear();
+    slider.value = '50';
+    slider.dispatchEvent(new Event('input'));
+    
+    expect(astChangeSpy).toHaveBeenCalledTimes(1);
+    expect(renderer.activeAST?.type).toBe('tree');
+    
+    // Change budget to 1, it should trigger an AST update picking lod0 (sphere)
+    astChangeSpy.mockClear();
+    slider.value = '1';
+    slider.dispatchEvent(new Event('input'));
+    
+    expect(astChangeSpy).toHaveBeenCalledTimes(1);
+    expect(renderer.activeAST?.type).toBe('sphere');
+
     document.body.innerHTML = '';
   });
 });
