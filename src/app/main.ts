@@ -1,5 +1,6 @@
 import './style.css';
 import { Renderer } from '../render/renderer';
+import { mountTargetRegion } from '../inverse/target';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="layout">
@@ -36,4 +37,10 @@ if (renderCanvas) {
   } catch (e) {
     console.error("Failed to initialize WebGL2 renderer:", e);
   }
+}
+
+// Initialize Target Region
+const targetContainer = document.getElementById('target');
+if (targetContainer) {
+  mountTargetRegion(targetContainer);
 }
