@@ -1,5 +1,7 @@
 import { getVertexShaderSource, getFragmentShaderSource } from './shader';
 import { setupControls } from '../ui/controls';
+import type { ASTNode } from '../gfl/types';
+import { selectLOD } from './lod';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -16,6 +18,10 @@ export class Renderer {
   private uBudgetLoc: WebGLUniformLocation | null;
   
   private currentBudget: number = 100.0;
+  
+  public originalAST: ASTNode | null = null;
+  public activeAST: ASTNode | null = null;
+  public onActiveASTChange?: (ast: ASTNode) => void;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2');
@@ -38,7 +44,22 @@ export class Renderer {
     
     setupControls((budget) => {
       this.currentBudget = budget;
+      this.updateActiveAST();
     });
+  }
+
+  public setAST(ast: ASTNode) {
+    this.originalAST = ast;
+    this.updateActiveAST();
+  }
+
+  private updateActiveAST() {
+    if (this.originalAST) {
+      this.activeAST = selectLOD(this.originalAST, this.currentBudget);
+      if (this.onActiveASTChange) {
+        this.onActiveASTChange(this.activeAST);
+      }
+    }
   }
 
   private compileShader(type: number, source: string): WebGLShader {
