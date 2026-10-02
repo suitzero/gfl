@@ -1,4 +1,12 @@
+import { mountLambdaControl } from './objective';
+
 export function mountTargetRegion(container: HTMLElement) {
+  // Mount lambda control additively to `#controls` if it exists.
+  // Using a dummy callback for now until the optimizer loop is fully wired.
+  mountLambdaControl((lambda) => {
+    console.log(`[Inverse] Lambda updated to: ${lambda}`);
+  });
+
   // Create wrapper
   const wrapper = document.createElement('div');
   wrapper.className = 'target-container';
