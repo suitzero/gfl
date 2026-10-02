@@ -1,6 +1,6 @@
 import type { ASTNode } from './types';
 
-export function compileToGLSL(ast: ASTNode): string {
+export function compileToGLSL(ast: ASTNode, budget: number = Infinity): string {
     const glsl: string[] = [];
     
     // Header & Boilerplate
@@ -60,9 +60,24 @@ float opSmoothUnion(float d1, float d2, float k) {
     }
     
     let varCount = 0;
-    function compileNode(node: ASTNode, pVar: string): { code: string, outVar: string } {
+    function compileNode(node: ASTNode, pVar: string, currentBudget: number): { code: string, outVar: string } {
+        const costThreshold = typeof node.params.cost === 'number' ? node.params.cost : 0;
+        if (currentBudget < costThreshold && node.params.fallback) {
+            // When fallback is used, we don't reduce the budget anymore, 
+            // but for nested refines we still pass it down.
+            return compileNode(node.params.fallback as ASTNode, pVar, currentBudget);
+        }
+
         const outVar = `d${varCount++}`;
         let code = '';
+        
+        if (node.type === 'refine') {
+            if (node.children.length > 0) {
+                return compileNode(node.children[0], pVar, currentBudget);
+            } else {
+                return { code: `    float ${outVar} = 9999.0;\n`, outVar };
+            }
+        }
         
         switch (node.type) {
             case 'sphere': {
@@ -100,7 +115,7 @@ float opSmoothUnion(float d1, float d2, float k) {
                 const newP = `p${varCount++}`;
                 code += `    vec3 ${newP} = ${pVar} - ${offStr};\n`;
                 if (node.children.length > 0) {
-                    const childOut = compileNode(node.children[0], newP);
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
                     code += childOut.code;
                     code += `    float ${outVar} = ${childOut.outVar};\n`;
                 } else {
@@ -113,7 +128,7 @@ float opSmoothUnion(float d1, float d2, float k) {
                 const newP = `p${varCount++}`;
                 code += `    vec3 ${newP} = ${pVar} / ${factor.toFixed(5)};\n`;
                 if (node.children.length > 0) {
-                    const childOut = compileNode(node.children[0], newP);
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
                     code += childOut.code;
                     code += `    float ${outVar} = ${childOut.outVar} * ${factor.toFixed(5)};\n`;
                 } else {
@@ -139,7 +154,7 @@ float opSmoothUnion(float d1, float d2, float k) {
                 code += `        ${newP} = rot * ${pVar};\n`; 
                 code += `    }\n`;
                 if (node.children.length > 0) {
-                    const childOut = compileNode(node.children[0], newP);
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
                     code += childOut.code;
                     code += `    float ${outVar} = ${childOut.outVar};\n`;
                 } else {
@@ -157,7 +172,7 @@ float opSmoothUnion(float d1, float d2, float k) {
                 }
                 let currentOut = '';
                 for (let i = 0; i < node.children.length; i++) {
-                    const childOut = compileNode(node.children[i], pVar);
+                    const childOut = compileNode(node.children[i], pVar, currentBudget);
                     code += childOut.code;
                     if (i === 0) {
                         currentOut = childOut.outVar;
@@ -184,7 +199,7 @@ float opSmoothUnion(float d1, float d2, float k) {
             }
             case 'material': {
                 if (node.children.length > 0) {
-                    const childOut = compileNode(node.children[0], pVar);
+                    const childOut = compileNode(node.children[0], pVar, currentBudget);
                     code += childOut.code;
                     code += `    float ${outVar} = ${childOut.outVar};\n`;
                 } else {
@@ -200,7 +215,7 @@ float opSmoothUnion(float d1, float d2, float k) {
     }
 
     if (geometryRoot) {
-        const rootOut = compileNode(geometryRoot, 'p');
+        const rootOut = compileNode(geometryRoot, 'p', budget);
         mapFunctionBody = rootOut.code + `    return ${rootOut.outVar};`;
     } else {
         mapFunctionBody = `    return 9999.0;`;
