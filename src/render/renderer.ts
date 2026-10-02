@@ -2,6 +2,7 @@ import { getVertexShaderSource, getFragmentShaderSource } from './shader';
 import { setupControls } from '../ui/controls';
 import type { ASTNode } from '../gfl/types';
 import { selectLOD } from './lod';
+import type { ImageDataLike } from '../inverse/errorMetric';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -51,6 +52,20 @@ export class Renderer {
   public setAST(ast: ASTNode) {
     this.originalAST = ast;
     this.updateActiveAST();
+  }
+
+  public setBudget(budget: number) {
+    this.currentBudget = budget;
+    this.updateActiveAST();
+  }
+
+  public getPixels(): ImageDataLike {
+    const { gl } = this;
+    const width = gl.canvas.width;
+    const height = gl.canvas.height;
+    const data = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    return { width, height, data };
   }
 
   private updateActiveAST() {
