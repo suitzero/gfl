@@ -57,6 +57,52 @@ describe('Renderer & Shaders', () => {
     document.body.innerHTML = '';
   });
 
+  it('should accumulate shader compile time during initialization', () => {
+    document.body.innerHTML = '<div id="controls"></div>';
+
+    // Mock canvas context
+    const canvas = document.createElement('canvas');
+    const mockContext = {
+      createShader: vi.fn(() => ({})),
+      shaderSource: vi.fn(),
+      compileShader: vi.fn(),
+      getShaderParameter: vi.fn(() => true),
+      createProgram: vi.fn(() => ({})),
+      attachShader: vi.fn(),
+      linkProgram: vi.fn(),
+      getProgramParameter: vi.fn(() => true),
+      deleteShader: vi.fn(),
+      getUniformLocation: vi.fn(),
+      createVertexArray: vi.fn(() => ({})),
+      bindVertexArray: vi.fn(),
+      createBuffer: vi.fn(() => ({})),
+      bindBuffer: vi.fn(),
+      bufferData: vi.fn(),
+      getAttribLocation: vi.fn(() => 0),
+      enableVertexAttribArray: vi.fn(),
+      vertexAttribPointer: vi.fn(),
+    };
+    vi.spyOn(canvas, 'getContext').mockReturnValue(mockContext as any);
+    
+    // We mock performance.now() to ensure non-zero compile time
+    let time = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => {
+      const current = time;
+      time += 5; // each call to performance.now() advances time by 5ms
+      return current;
+    });
+
+    const renderer = new Renderer(canvas);
+    
+    // compileShader is called twice, wrapping `performance.now()` twice each time (diff is 5ms per call)
+    // createProgram is called once, wrapping `performance.now()` twice (diff is 5ms)
+    // total = 5 + 5 + 5 = 15ms
+    expect(renderer.shaderCompileTimeMs).toBeGreaterThan(0);
+    expect(renderer.shaderCompileTimeMs).toBe(15);
+    
+    vi.restoreAllMocks();
+  });
+
   it('should update active AST when budget changes based on LOD', () => {
     document.body.innerHTML = '<div id="controls"></div>';
 
