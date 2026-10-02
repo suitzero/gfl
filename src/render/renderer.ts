@@ -6,6 +6,7 @@ import type { ImageDataLike } from '../inverse/errorMetric';
 import { setupMetrics, MetricsUI } from '../ui/metrics';
 import { loadExample } from '../gfl/examples';
 import { parseGFL } from '../gfl/parser';
+import { DebugHUD } from '../ui/hud';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -21,12 +22,15 @@ export class Renderer {
   private uLightColorLoc: WebGLUniformLocation | null;
   private uBudgetLoc: WebGLUniformLocation | null;
   
-  private currentBudget: number = 100.0;
+  public currentBudget: number = 100.0;
+  public shaderCompileTimeMs: number = 0;
   
   public originalAST: ASTNode | null = null;
   public activeAST: ASTNode | null = null;
   public onActiveASTChange?: (ast: ASTNode) => void;
   private metricsUI: MetricsUI | null = null;
+  private debugHUD: DebugHUD | null = null;
+  private lastRenderTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2');
@@ -57,6 +61,11 @@ export class Renderer {
 
     // Initialize metrics UI
     this.metricsUI = setupMetrics(this);
+
+    // Initialize HUD
+    if (canvas.parentElement) {
+      this.debugHUD = new DebugHUD(canvas.parentElement, this);
+    }
 
     // Provide a default AST so the sample scene requirement is met 
     // and metrics can be visualized from the start.
@@ -103,6 +112,7 @@ export class Renderer {
   }
 
   private compileShader(type: number, source: string): WebGLShader {
+    const start = performance.now();
     const shader = this.gl.createShader(type);
     if (!shader) {
       throw new Error('Failed to create shader');
@@ -115,6 +125,7 @@ export class Renderer {
       this.gl.deleteShader(shader);
       throw new Error(`Shader compilation error: ${info}`);
     }
+    this.shaderCompileTimeMs += performance.now() - start;
     return shader;
   }
 
@@ -122,6 +133,7 @@ export class Renderer {
     const vertexShader = this.compileShader(this.gl.VERTEX_SHADER, vertexSrc);
     const fragmentShader = this.compileShader(this.gl.FRAGMENT_SHADER, fragmentSrc);
 
+    const start = performance.now();
     const program = this.gl.createProgram();
     if (!program) {
       throw new Error('Failed to create WebGL program');
@@ -135,6 +147,7 @@ export class Renderer {
       this.gl.deleteProgram(program);
       throw new Error(`Program linking error: ${info}`);
     }
+    this.shaderCompileTimeMs += performance.now() - start;
     
     // Clean up shaders
     this.gl.deleteShader(vertexShader);
@@ -207,5 +220,16 @@ export class Renderer {
     gl.uniform3f(this.uLightColorLoc, 1.0, 0.9, 0.8);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    
+    const now = performance.now();
+    let frameTimeMs = 0;
+    if (this.lastRenderTime !== 0) {
+      frameTimeMs = now - this.lastRenderTime;
+    }
+    this.lastRenderTime = now;
+    
+    if (this.debugHUD) {
+      this.debugHUD.update(frameTimeMs);
+    }
   }
 }
