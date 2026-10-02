@@ -3,6 +3,9 @@ import { setupControls } from '../ui/controls';
 import type { ASTNode } from '../gfl/types';
 import { selectLOD } from './lod';
 import type { ImageDataLike } from '../inverse/errorMetric';
+import { setupMetrics, MetricsUI } from '../ui/metrics';
+import { loadExample } from '../gfl/examples';
+import { parseGFL } from '../gfl/parser';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -23,6 +26,7 @@ export class Renderer {
   public originalAST: ASTNode | null = null;
   public activeAST: ASTNode | null = null;
   public onActiveASTChange?: (ast: ASTNode) => void;
+  private metricsUI: MetricsUI | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2');
@@ -46,12 +50,33 @@ export class Renderer {
     setupControls((budget) => {
       this.currentBudget = budget;
       this.updateActiveAST();
+      if (this.metricsUI) {
+        this.metricsUI.updateBudget(budget);
+      }
     });
+
+    // Initialize metrics UI
+    this.metricsUI = setupMetrics(this);
+
+    // Provide a default AST so the sample scene requirement is met 
+    // and metrics can be visualized from the start.
+    const defaultGFL = loadExample('scene-b-robot');
+    if (defaultGFL) {
+      try {
+        const parsed = parseGFL(defaultGFL);
+        this.setAST(parsed);
+      } catch (e) {
+        console.warn("Failed to parse default example GFL for metrics", e);
+      }
+    }
   }
 
   public setAST(ast: ASTNode) {
     this.originalAST = ast;
     this.updateActiveAST();
+    if (this.metricsUI) {
+      this.metricsUI.recomputeCurves();
+    }
   }
 
   public setBudget(budget: number) {
