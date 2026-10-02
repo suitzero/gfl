@@ -1,6 +1,7 @@
 import './style.css';
 import { Renderer } from '../render/renderer';
 import { mountTargetRegion } from '../inverse/target';
+import { setupIntegrationInfo, updateFrameTime } from '../photon/integration';
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div class="layout">
@@ -25,9 +26,14 @@ const renderCanvas = document.querySelector<HTMLCanvasElement>('#render-canvas')
 if (renderCanvas) {
   try {
     const renderer = new Renderer(renderCanvas);
+    setupIntegrationInfo(renderer);
     
     // Animation loop
+    let lastTime = performance.now();
     const renderLoop = (time: number) => {
+      const now = performance.now();
+      updateFrameTime(now - lastTime);
+      lastTime = now;
       // Convert time to seconds
       renderer.render(time * 0.001);
       requestAnimationFrame(renderLoop);
