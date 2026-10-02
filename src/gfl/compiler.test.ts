@@ -74,4 +74,52 @@ describe('GFL Compiler', () => {
         expect(shader).toContain('sdPlane');
         expect(shader).toContain('opSmoothUnion');
     });
+
+    it('compiles fallback when budget is below cost on refine node', () => {
+        const ast = parseGFL(`(refine :cost 20 :fallback (box :size [1 1 1]) (sphere :radius 1.0))`);
+        const shader = compileToGLSL(ast, 10);
+        expect(shader).toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+        expect(shader).not.toContain('sdSphere(p, 1.00000)');
+    });
+
+    it('compiles full representation when budget is above cost on refine node', () => {
+        const ast = parseGFL(`(refine :cost 20 :fallback (box :size [1 1 1]) (sphere :radius 1.0))`);
+        const shader = compileToGLSL(ast, 30);
+        expect(shader).toContain('sdSphere(p, 1.00000)');
+        expect(shader).not.toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+    });
+
+    it('compiles fallback on regular node when budget is below cost', () => {
+        const ast = parseGFL(`(sphere :radius 1.0 :cost 15 :fallback (box :size [1 1 1]))`);
+        const shader = compileToGLSL(ast, 10);
+        expect(shader).toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+        expect(shader).not.toContain('sdSphere(p, 1.00000)');
+    });
+
+    it('handles nested refine nodes correctly', () => {
+        const ast = parseGFL(`
+            (refine :cost 50 :fallback (box :size [1 1 1])
+                (refine :cost 100 :fallback (sphere :radius 1.0)
+                    (plane :normal [0 1 0] :offset 1.0)
+                )
+            )
+        `);
+        // Budget 20: below 50, gets outer fallback (box)
+        const shader1 = compileToGLSL(ast, 20);
+        expect(shader1).toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+        expect(shader1).not.toContain('sdSphere(p, 1.00000)');
+        expect(shader1).not.toContain('sdPlane(p, vec3(0.00000, 1.00000, 0.00000), 1.00000)');
+
+        // Budget 70: above 50, below 100, gets inner fallback (sphere)
+        const shader2 = compileToGLSL(ast, 70);
+        expect(shader2).toContain('sdSphere(p, 1.00000)');
+        expect(shader2).not.toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+        expect(shader2).not.toContain('sdPlane(p, vec3(0.00000, 1.00000, 0.00000), 1.00000)');
+
+        // Budget 150: above 100, gets full expression (plane)
+        const shader3 = compileToGLSL(ast, 150);
+        expect(shader3).toContain('sdPlane(p, vec3(0.00000, 1.00000, 0.00000), 1.00000)');
+        expect(shader3).not.toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
+        expect(shader3).not.toContain('sdSphere(p, 1.00000)');
+    });
 });
