@@ -52,7 +52,7 @@ describe('Renderer & Shaders', () => {
     
     // Check if label was updated
     const label = document.querySelector('label') as HTMLLabelElement;
-    expect(label.textContent).toBe('Render Budget: 50');
+    expect(label.textContent).toBe('Structural Budget: 50');
     
     document.body.innerHTML = '';
   });
