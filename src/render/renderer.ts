@@ -7,6 +7,7 @@ import { setupMetrics, MetricsUI } from '../ui/metrics';
 import { loadExample } from '../gfl/examples';
 import { parseGFL } from '../gfl/parser';
 import { DebugHUD } from '../ui/hud';
+import { RefinementUI } from '../ui/refinement';
 import { RefinableIntervalNumber } from './values';
 
 export class Renderer {
@@ -34,6 +35,7 @@ export class Renderer {
   public onActiveASTChange?: (ast: ASTNode) => void;
   private metricsUI: MetricsUI | null = null;
   private debugHUD: DebugHUD | null = null;
+  private refinementUI: RefinementUI | null = null;
   private lastRenderTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -81,6 +83,7 @@ export class Renderer {
     // Initialize HUD
     if (canvas.parentElement) {
       this.debugHUD = new DebugHUD(canvas.parentElement, this);
+      this.refinementUI = new RefinementUI(canvas.parentElement, this);
     }
 
     // Provide a default AST so the sample scene requirement is met 
@@ -249,6 +252,9 @@ export class Renderer {
     
     if (this.debugHUD) {
       this.debugHUD.update(frameTimeMs);
+    }
+    if (this.refinementUI) {
+      this.refinementUI.update();
     }
   }
 }
