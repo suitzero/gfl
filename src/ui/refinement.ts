@@ -73,10 +73,8 @@ export class RefinementUI {
     const steps = Math.floor(10.0 + (100.0 - 10.0) * budget_t);
 
     const interval = refinableRadius.interval;
-    let minStr = '0', maxStr = '0', widthStr = '0', errorStr = '0';
+    let widthStr = '0', errorStr = '0';
     if (interval) {
-      minStr = interval[0].toFixed(3);
-      maxStr = interval[1].toFixed(3);
       widthStr = (interval[1] - interval[0]).toFixed(3);
       errorStr = refinableRadius.errorBound.toFixed(3);
     }
