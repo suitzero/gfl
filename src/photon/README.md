@@ -1,8 +1,8 @@
 # src/photon/
 
-**Ownership**: WS-D
+**Ownership**: WS-D (photon-simulation)
 
-This module simulates photons/shot-noise, photon budget graphs, and integrated demo features (steps 29, 30, 31, 32). 
+This module encapsulates the photon and shot-noise simulation for the visual demo. It computes and visualizes the relationship between a strict photon budget and reconstruction error/SNR, offering theoretical curves alongside Monte Carlo simulated metrics to demonstrate how budget affects precision (steps 29, 30, 31, 32).
 
 ## API Contract
 

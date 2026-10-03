@@ -1,8 +1,8 @@
 # src/inverse/
 
-**Ownership**: WS-C
+**Ownership**: WS-C (inverse-programming)
 
-This module covers inverse programming: target image upload, error metrics, optimizer, AI-editable loop, and compression demo (steps 12, 13, 14, 15, 22, 23, 24, 28).
+This module handles the inverse-programming capabilities of the visual demo. It includes target image handling, mathematical error metrics computation, an iterative optimizer loop, and the core logic for the "compression as explanation" demo, illustrating the relationship between programmatic complexity and reconstruction quality (steps 12, 13, 14, 15, 22, 23, 24, 28).
 
 ## Error Metrics API
 
