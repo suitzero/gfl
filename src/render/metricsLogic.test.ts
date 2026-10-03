@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMetricsCurves } from './metricsLogic';
+import { computeMetricsCurves, computeMetricsCurvesAsync } from './metricsLogic';
 import type { ASTNode } from '../gfl/types';
 import type { RenderFunctionWithTime } from './metricsLogic';
 
@@ -42,5 +42,37 @@ describe('Metrics Logic', () => {
     expect(curves[2].error).toBe(0); // vs itself
     expect(curves[2].cost).toBe(1);
     expect(curves[2].frameTime).toBe(250);
+  });
+
+  it('should compute metrics curves asynchronously', async () => {
+    const mockAst: ASTNode = { type: 'sphere', children: [], params: { r: 1 }, cost: 1, qualityLevel: 0 };
+    
+    const mockRenderFn: RenderFunctionWithTime = (_ast: ASTNode, budget: number) => {
+      const data = new Uint8Array(4).fill(budget);
+      return {
+        data: { width: 1, height: 1, data },
+        timeMs: budget * 2.5
+      };
+    };
+
+    const budgets = [1, 2, 5, 10, 20, 40, 60, 80, 100];
+    let progressUpdates = 0;
+    
+    const curves = await computeMetricsCurvesAsync(mockAst, budgets, mockRenderFn, (progress) => {
+      progressUpdates++;
+      expect(progress).toBeGreaterThan(0);
+      expect(progress).toBeLessThanOrEqual(1);
+    });
+
+    expect(curves).toHaveLength(9);
+    expect(progressUpdates).toBe(9);
+    
+    // Check ordered results and some metrics
+    expect(curves[0].budget).toBe(1);
+    // target data is [100], current is [1]. mse = 99^2 = 9801
+    expect(curves[0].error).toBe(9801);
+    
+    expect(curves[8].budget).toBe(100);
+    expect(curves[8].error).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 import type { Renderer } from '../render/renderer';
-import { computeMetricsCurves } from '../render/metricsLogic';
+import { computeMetricsCurves, computeMetricsCurvesAsync } from '../render/metricsLogic';
 import type { CurvePoint } from '../render/metricsLogic';
 
 export class MetricsUI {
@@ -43,19 +43,13 @@ export class MetricsUI {
        return;
     }
 
-    const budgets = [];
-    for (let i = 1; i <= 100; i += 5) {
-      budgets.push(i);
-    }
-    if (budgets[budgets.length - 1] !== 100) {
-      budgets.push(100);
-    }
+    const budgets = [1, 2, 5, 10, 20, 40, 60, 80, 100];
 
     // Measure using renderer's webgl output
     // Note: We need to temporarily change renderer budget to measure.
     const originalBudget = this.currentBudget;
     
-    const renderFnWithTime = (_ast: any, b: number) => {
+    const renderFnWithTime = (_ast: import('../gfl/types').ASTNode, b: number) => {
       this.renderer.setBudget(b); // this updates activeAST
       
       const start = performance.now();
@@ -71,6 +65,44 @@ export class MetricsUI {
     // Restore budget
     this.renderer.setBudget(originalBudget);
     
+    this.draw();
+  }
+
+  public async runSweep(onProgress?: (progress: number | null) => void) {
+    if (!this.renderer.originalAST) {
+      return;
+    }
+
+    const budgets = [1, 2, 5, 10, 20, 40, 60, 80, 100];
+    const originalBudget = this.currentBudget;
+    
+    const renderFnWithTime = (_ast: any, b: number) => {
+      this.renderer.setBudget(b); // this updates activeAST
+      
+      const start = performance.now();
+      this.renderer.render(0); // Assuming 0 time
+      const end = performance.now();
+      
+      const pixels = this.renderer.getPixels();
+      return { data: pixels, timeMs: end - start };
+    };
+
+    if (onProgress) onProgress(0);
+
+    this.curves = await computeMetricsCurvesAsync(
+      this.renderer.originalAST,
+      budgets,
+      renderFnWithTime,
+      (progress) => {
+        if (onProgress) onProgress(progress);
+        this.draw();
+      }
+    );
+
+    // Restore budget
+    this.renderer.setBudget(originalBudget);
+    
+    if (onProgress) onProgress(null); // signal complete
     this.draw();
   }
 

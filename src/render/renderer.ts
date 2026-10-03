@@ -51,13 +51,24 @@ export class Renderer {
 
     this.vao = this.setupQuad();
     
-    setupControls((budget) => {
-      this.currentBudget = budget;
-      this.updateActiveAST();
-      if (this.metricsUI) {
-        this.metricsUI.updateBudget(budget);
+    const controls = setupControls(
+      (budget) => {
+        this.currentBudget = budget;
+        this.updateActiveAST();
+        if (this.metricsUI) {
+          this.metricsUI.updateBudget(budget);
+        }
+      },
+      () => {
+        if (this.metricsUI) {
+          this.metricsUI.runSweep((progress) => {
+            if (controls) {
+              controls.setSweepProgress(progress);
+            }
+          });
+        }
       }
-    });
+    );
 
     // Initialize metrics UI
     this.metricsUI = setupMetrics(this);

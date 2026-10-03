@@ -1,6 +1,9 @@
 import { setPhotonBudget, initPhotonOverlay } from '../photon/overlay';
 
-export function setupControls(onBudgetChange: (budget: number) => void) {
+export function setupControls(
+  onBudgetChange: (budget: number) => void,
+  onRunSweep?: () => void
+) {
   const controlsContainer = document.getElementById('controls');
   if (!controlsContainer) {
     console.warn("Controls container not found, cannot setup budget UI.");
@@ -57,7 +60,34 @@ export function setupControls(onBudgetChange: (budget: number) => void) {
   container.appendChild(photonLabel);
   container.appendChild(photonSlider);
 
+  const sweepButton = document.createElement('button');
+  sweepButton.textContent = 'Run Budget Sweep';
+  sweepButton.style.marginTop = '10px';
+  sweepButton.style.width = '100%';
+  sweepButton.style.padding = '8px';
+  sweepButton.style.cursor = 'pointer';
+  
+  if (onRunSweep) {
+    sweepButton.addEventListener('click', () => {
+      onRunSweep();
+    });
+  }
+  
+  container.appendChild(sweepButton);
+
   controlsContainer.appendChild(container);
   
   initPhotonOverlay();
+  
+  return {
+    setSweepProgress: (progress: number | null) => {
+      if (progress === null) {
+        sweepButton.disabled = false;
+        sweepButton.textContent = 'Run Budget Sweep';
+      } else {
+        sweepButton.disabled = true;
+        sweepButton.textContent = `Sweeping... ${Math.round(progress * 100)}%`;
+      }
+    }
+  };
 }
