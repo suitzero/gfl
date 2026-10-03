@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { RefinementUI } from './refinement';
 import type { Renderer } from '../render/renderer';
 import type { ASTNode } from '../gfl/types';
@@ -25,7 +25,7 @@ describe('RefinementUI', () => {
       refinableRadius: new RefinableIntervalNumber(1.0, 1.0, 50)
     } as unknown as Renderer;
 
-    const ui = new RefinementUI(parent, mockRenderer);
+    new RefinementUI(parent, mockRenderer);
 
     // Initial state is hidden
     const container = parent.querySelector('div') as HTMLDivElement;
