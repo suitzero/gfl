@@ -207,6 +207,95 @@ float opSmoothUnion(float d1, float d2, float k) {
                 }
                 break;
             }
+            case 'repeat': {
+                const count = node.params.count ?? 1;
+                const axis = node.params.axis || [1, 0, 0];
+                const spacing = node.params.spacing ?? 1.0;
+                
+                const newP = `p${varCount++}`;
+                const axStr = `vec3(${axis[0].toFixed(5)}, ${axis[1].toFixed(5)}, ${axis[2].toFixed(5)})`;
+                const maxIndex = count - 1;
+                
+                code += `    vec3 ${newP} = ${pVar};\n`;
+                code += `    {\n`;
+                code += `        vec3 ax = normalize(${axStr});\n`;
+                code += `        float proj = dot(${newP}, ax);\n`;
+                code += `        float cellIndex = round(proj / ${spacing.toFixed(5)});\n`;
+                code += `        cellIndex = clamp(cellIndex, 0.0, ${maxIndex.toFixed(5)});\n`;
+                code += `        ${newP} = ${newP} - ax * (cellIndex * ${spacing.toFixed(5)});\n`;
+                code += `    }\n`;
+                
+                if (node.children.length > 0) {
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
+                    code += childOut.code;
+                    code += `    float ${outVar} = ${childOut.outVar};\n`;
+                } else {
+                    code += `    float ${outVar} = 9999.0;\n`;
+                }
+                break;
+            }
+            case 'mirror': {
+                const axis = node.params.axis || [1, 0, 0];
+                const newP = `p${varCount++}`;
+                const axStr = `vec3(${axis[0].toFixed(5)}, ${axis[1].toFixed(5)}, ${axis[2].toFixed(5)})`;
+                
+                code += `    vec3 ${newP} = ${pVar};\n`;
+                code += `    {\n`;
+                code += `        vec3 ax = normalize(${axStr});\n`;
+                code += `        float d = dot(${newP}, ax);\n`;
+                code += `        if (d < 0.0) ${newP} -= 2.0 * d * ax;\n`;
+                code += `    }\n`;
+                
+                if (node.children.length > 0) {
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
+                    code += childOut.code;
+                    code += `    float ${outVar} = ${childOut.outVar};\n`;
+                } else {
+                    code += `    float ${outVar} = 9999.0;\n`;
+                }
+                break;
+            }
+            case 'radialRepeat':
+            case 'radial-repeat': {
+                const count = node.params.count ?? 1;
+                const axis = node.params.axis || [0, 1, 0];
+                
+                const newP = `p${varCount++}`;
+                const axStr = `vec3(${axis[0].toFixed(5)}, ${axis[1].toFixed(5)}, ${axis[2].toFixed(5)})`;
+                
+                code += `    vec3 ${newP} = ${pVar};\n`;
+                code += `    {\n`;
+                code += `        vec3 ax = normalize(${axStr});\n`;
+                code += `        vec3 up = abs(ax.y) < 0.999 ? vec3(0,1,0) : vec3(1,0,0);\n`;
+                code += `        vec3 right = normalize(cross(up, ax));\n`;
+                code += `        vec3 fwd = cross(ax, right);\n`;
+                code += `        \n`;
+                code += `        float pRight = dot(${newP}, right);\n`;
+                code += `        float pFwd = dot(${newP}, fwd);\n`;
+                code += `        float pAx = dot(${newP}, ax);\n`;
+                code += `        \n`;
+                code += `        float r = length(vec2(pRight, pFwd));\n`;
+                code += `        float phi = atan(pRight, pFwd);\n`; // Note: using (y, x) -> (pRight, pFwd) for atan, angle from fwd
+                code += `        \n`;
+                code += `        float sector = 6.28318530718 / float(${count});\n`;
+                code += `        float halfSector = sector / 2.0;\n`;
+                code += `        phi = mod(phi + halfSector, sector) - halfSector;\n`;
+                code += `        \n`;
+                code += `        pRight = r * sin(phi);\n`;
+                code += `        pFwd = r * cos(phi);\n`;
+                code += `        \n`;
+                code += `        ${newP} = right * pRight + fwd * pFwd + ax * pAx;\n`;
+                code += `    }\n`;
+                
+                if (node.children.length > 0) {
+                    const childOut = compileNode(node.children[0], newP, currentBudget);
+                    code += childOut.code;
+                    code += `    float ${outVar} = ${childOut.outVar};\n`;
+                } else {
+                    code += `    float ${outVar} = 9999.0;\n`;
+                }
+                break;
+            }
             default:
                 code += `    float ${outVar} = 9999.0;\n`;
         }

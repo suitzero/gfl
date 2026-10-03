@@ -9,6 +9,10 @@ export function nodeCost(node: ASTNode): number {
     case 'translate':
     case 'rotate':
     case 'scale':
+    case 'repeat':
+    case 'mirror':
+    case 'radialRepeat':
+    case 'radial-repeat':
       return 1;
     case 'smooth-union':
       return 3;

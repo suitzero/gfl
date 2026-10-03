@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compileToGLSL } from './compiler';
 import { parseGFL } from './parser';
+import { metricTriple } from '../inverse/metrics';
 
 describe('GFL Compiler', () => {
     it('compiles a basic sphere', () => {
@@ -121,5 +122,62 @@ describe('GFL Compiler', () => {
         expect(shader3).toContain('sdPlane(p, vec3(0.00000, 1.00000, 0.00000), 1.00000)');
         expect(shader3).not.toContain('sdBox(p, vec3(1.00000, 1.00000, 1.00000))');
         expect(shader3).not.toContain('sdSphere(p, 1.00000)');
+    });
+    
+    it('compiles repeat primitive', () => {
+        const ast = parseGFL(`(repeat :count 5 :axis [1 0 0] :spacing 2.0 (sphere :radius 1.0))`);
+        const shader = compileToGLSL(ast);
+        expect(shader).toContain('vec3(1.00000, 0.00000, 0.00000)'); // axis
+        expect(shader).toContain('4.00000'); // maxIndex = 5 - 1
+        expect(shader).toContain('2.00000'); // spacing
+        expect(shader).toContain('clamp(cellIndex, 0.0, 4.00000)'); // index clamping
+        expect(shader).toContain('sdSphere');
+    });
+
+    it('compiles mirror primitive', () => {
+        const ast = parseGFL(`(mirror :axis [0 1 0] (box :size [1 1 1]))`);
+        const shader = compileToGLSL(ast);
+        expect(shader).toContain('vec3(0.00000, 1.00000, 0.00000)'); // axis
+        expect(shader).toContain('if (d < 0.0)');
+        expect(shader).toContain('sdBox');
+    });
+
+    it('compiles radial-repeat primitive', () => {
+        const ast = parseGFL(`(radial-repeat :count 6 :axis [0 0 1] (sphere :radius 1.0))`);
+        const shader = compileToGLSL(ast);
+        expect(shader).toContain('vec3(0.00000, 0.00000, 1.00000)'); // axis
+        expect(shader).toContain('6.28318530718 / float(6)'); // sector
+        expect(shader).toContain('atan('); // polar conv
+        expect(shader).toContain('sdSphere');
+    });
+    
+    it('satisfies criteria: rule form is smaller than unrolled form while compiling successfully', () => {
+        const repeatedCode = `(repeat :count 3 :axis [1 0 0] :spacing 2.0 (sphere :radius 1.0))`;
+        const unrolledCode = `
+          (union
+            (translate :offset [0 0 0] (sphere :radius 1.0))
+            (translate :offset [2 0 0] (sphere :radius 1.0))
+            (translate :offset [4 0 0] (sphere :radius 1.0))
+          )
+        `;
+        
+        const repeatedAST = parseGFL(repeatedCode);
+        const unrolledAST = parseGFL(unrolledCode);
+        
+        const repShader = compileToGLSL(repeatedAST);
+        const unrollShader = compileToGLSL(unrolledAST);
+        
+        // Both should successfully generate a shader
+        expect(repShader).toContain('sdSphere');
+        expect(unrollShader).toContain('sdSphere');
+        
+        const mockTarget = { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) };
+        const mockRender = { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) };
+
+        const repMetrics = metricTriple({ target: mockTarget, render: mockRender }, repeatedAST, repeatedCode);
+        const unrollMetrics = metricTriple({ target: mockTarget, render: mockRender }, unrolledAST, unrolledCode);
+
+        // repeated form must have smaller AST size
+        expect(repMetrics.programSize).toBeLessThan(unrollMetrics.programSize);
     });
 });
