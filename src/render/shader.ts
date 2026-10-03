@@ -25,6 +25,7 @@ export function getFragmentShaderSource(): string {
     uniform vec3 u_lightDir;
     uniform vec3 u_lightColor;
     uniform float u_budget; // 1.0 to 100.0
+    uniform float u_sphereRadius;
     
     // Configurable parameters
     const int BASE_MAX_STEPS = 100;

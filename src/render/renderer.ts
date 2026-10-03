@@ -7,6 +7,7 @@ import { setupMetrics, MetricsUI } from '../ui/metrics';
 import { loadExample } from '../gfl/examples';
 import { parseGFL } from '../gfl/parser';
 import { DebugHUD } from '../ui/hud';
+import { RefinableIntervalNumber } from './values';
 
 export class Renderer {
   private gl: WebGL2RenderingContext;
@@ -21,9 +22,12 @@ export class Renderer {
   private uLightDirLoc: WebGLUniformLocation | null;
   private uLightColorLoc: WebGLUniformLocation | null;
   private uBudgetLoc: WebGLUniformLocation | null;
+  private uSphereRadiusLoc: WebGLUniformLocation | null;
   
   public currentBudget: number = 100.0;
   public shaderCompileTimeMs: number = 0;
+  
+  public refinableRadius = new RefinableIntervalNumber(1.0, 1.0);
   
   public originalAST: ASTNode | null = null;
   public activeAST: ASTNode | null = null;
@@ -48,6 +52,7 @@ export class Renderer {
     this.uLightDirLoc = this.gl.getUniformLocation(this.program, 'u_lightDir');
     this.uLightColorLoc = this.gl.getUniformLocation(this.program, 'u_lightColor');
     this.uBudgetLoc = this.gl.getUniformLocation(this.program, 'u_budget');
+    this.uSphereRadiusLoc = this.gl.getUniformLocation(this.program, 'u_sphereRadius');
 
     this.vao = this.setupQuad();
     
@@ -218,6 +223,9 @@ export class Renderer {
 
     gl.uniform2f(this.uResolutionLoc, gl.canvas.width, gl.canvas.height);
     gl.uniform1f(this.uBudgetLoc, this.currentBudget);
+    
+    this.refinableRadius.refine(this.currentBudget);
+    gl.uniform1f(this.uSphereRadiusLoc, this.refinableRadius.value);
     
     // Camera setup
     gl.uniform3f(this.uCameraPosLoc, 0.0, 2.0, -5.0);

@@ -20,7 +20,8 @@ describe('DebugHUD', () => {
       originalAST: mockAst,
       activeAST: mockAst,
       currentBudget: 50,
-      shaderCompileTimeMs: 15.5
+      shaderCompileTimeMs: 15.5,
+      refinableRadius: { interval: [0.5, 1.5] }
     } as unknown as Renderer;
 
     let time = 0;

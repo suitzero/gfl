@@ -70,6 +70,15 @@ export class DebugHUD {
     const budget_t = (currentBudget - 1.0) / 99.0;
     const stepCount = Math.floor(10.0 + (100.0 - 10.0) * budget_t); // BASE_MAX_STEPS = 100
 
+    const interval = this.renderer.refinableRadius.interval;
+    let intervalStr = 'N/A';
+    if (interval) {
+      const min = interval[0].toFixed(3);
+      const max = interval[1].toFixed(3);
+      const width = (interval[1] - interval[0]).toFixed(3);
+      intervalStr = `[${min}, ${max}] (w=${width})`;
+    }
+
     this.container.textContent = `
 FPS               : ${this.fps}
 Frame Time (ms)   : ${frameTimeMs.toFixed(2)}
@@ -77,6 +86,7 @@ Shader Compile(ms): ${shaderCompileTimeMs.toFixed(2)}
 AST Cost          : ${cost}
 Selected LOD      : [${lodStr}]
 Raymarch Steps    : ${stepCount}
+Sphere Radius Int.: ${intervalStr}
 `.trim();
   }
 }
