@@ -158,4 +158,45 @@ describe('optimizeAST', () => {
     expect(optMetrics.runtimeCost).toBeLessThan(unoptMetrics.runtimeCost);
     expect(optMetrics.reconstructionError).toBe(unoptMetrics.reconstructionError); // Because target == render in both
   });
+
+  it('removes dead repeat nodes', () => {
+    const ast: ASTNode = {
+      type: 'union',
+      params: {},
+      children: [
+        { type: 'repeat', params: { count: 5 }, children: [], cost: 1 },
+        { type: 'sphere', params: { radius: 1 }, children: [], cost: 1 }
+      ],
+      cost: 1
+    };
+
+    const optimized = optimizeAST(ast);
+    expect(optimized?.type).toBe('sphere');
+  });
+
+  it('reduces cost on programs containing repeat nodes', () => {
+    const ast: ASTNode = {
+      type: 'union',
+      params: {},
+      children: [
+        {
+          type: 'repeat',
+          params: { count: 3, spacing: 2 },
+          children: [
+            { type: 'translate', params: { offset: [0,0,0] }, children: [
+                { type: 'sphere', params: { radius: 1 }, children: [], cost: 1 }
+              ], cost: 1 }
+          ],
+          cost: 1
+        }
+      ],
+      cost: 1
+    };
+
+    const optimized = optimizeAST(ast);
+    expect(optimized).not.toBeNull();
+    // Union wrapper goes away, repeat remains but its child translate (0 offset) gets folded.
+    expect(optimized?.type).toBe('repeat');
+    expect(optimized?.children[0].type).toBe('sphere');
+  });
 });

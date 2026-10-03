@@ -37,7 +37,7 @@ export function optimizeAST(node: ASTNode): ASTNode | null {
 
   // 2. Dead-node removal
   const isEmptyNode = optimizedChildren.length === 0;
-  const isTransform = ['translate', 'rotate', 'scale', 'material'].includes(node.type);
+  const isTransform = ['translate', 'rotate', 'scale', 'material', 'repeat', 'mirror', 'radialRepeat', 'radial-repeat'].includes(node.type);
   const isCSG = ['union', 'intersect', 'subtract', 'smooth-union'].includes(node.type);
 
   if (isEmptyNode && (isTransform || isCSG)) {
