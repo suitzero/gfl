@@ -1,8 +1,8 @@
 # src/gfl/
 
-**Ownership**: WS-A
+**Ownership**: WS-A (gfl-compiler)
 
-This module contains the S-expression parser, AST types, GFL→GLSL compiler, and cost model (steps 2, 3, 4, 6, 7, 10).
+This module contains the core GFL (Geometric Function Language) compiler, including the S-expression parser, AST types, GFL→GLSL compiler, and the programmatic cost model. It implements the foundational language and compilation steps necessary to translate budget-aware programmatic abstractions into executable SDF fragment shaders (steps 2, 3, 4, 6, 7, 10).
 
 ## Compiler API
 
